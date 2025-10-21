@@ -1,0 +1,3 @@
+ai-system-designer/frontend/node_modules/*
+.DS_Store
+ai-system-designer/backend/.env

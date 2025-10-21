@@ -1,0 +1,383 @@
+{
+  "f888edad-8a5d-4748-af36-7d920e618ef0": {
+    "id": "f888edad-8a5d-4748-af36-7d920e618ef0",
+    "version": 1,
+    "timestamp": "2025-09-27T23:46:52.766105",
+    "requirements": "Netflix",
+    "assumptions": {
+      "users": "1000-10000",
+      "region": "US",
+      "budget": "moderate"
+    },
+    "constraints": [],
+    "design": {
+      "components": [
+        {
+          "name": "Frontend",
+          "type": "Web Application",
+          "responsibilities": [
+            "User Interface",
+            "User Experience",
+            "Client-side Logic"
+          ],
+          "technology": "React.js"
+        },
+        {
+          "name": "Backend API",
+          "type": "REST API",
+          "responsibilities": [
+            "Business Logic",
+            "Data Processing",
+            "Authentication"
+          ],
+          "technology": "FastAPI"
+        },
+        {
+          "name": "Database",
+          "type": "Relational Database",
+          "responsibilities": [
+            "Data Storage",
+            "Data Persistence",
+            "ACID Transactions"
+          ],
+          "technology": "PostgreSQL"
+        }
+      ],
+      "capacity_estimations": {
+        "expected_users": "1000-10000",
+        "requests_per_second": "100-500",
+        "data_storage": "10GB-100GB"
+      },
+      "tradeoffs": [
+        "Chose PostgreSQL over NoSQL for ACID compliance but may limit horizontal scaling",
+        "React for rich UI but increases client-side complexity",
+        "REST API for simplicity but GraphQL might be more efficient for complex queries"
+      ],
+      "architecture_patterns": [
+        "MVC",
+        "Layered Architecture",
+        "API Gateway"
+      ],
+      "non_functional_requirements": {
+        "availability": "99.9%",
+        "response_time": "<200ms",
+        "scalability": "Horizontal scaling supported"
+      }
+    },
+    "parent_id": null
+  },
+  "7faddf75-a40f-418a-9444-5a51ede17a7b": {
+    "id": "7faddf75-a40f-418a-9444-5a51ede17a7b",
+    "version": 1,
+    "timestamp": "2025-10-12T20:13:19.051634",
+    "requirements": "Design a simple URL shortner app.",
+    "assumptions": {
+      "users": "1000-10000",
+      "region": "US",
+      "budget": "moderate"
+    },
+    "constraints": [
+      "cost-effective"
+    ],
+    "design": {
+      "components": [
+        {
+          "name": "Edge CDN and Security",
+          "type": "CDN",
+          "responsibilities": [
+            "Terminate HTTPS on custom short domain",
+            "Cache redirect responses for popular short codes",
+            "Block common threats and rate-limit at the edge",
+            "Route API traffic to API Gateway"
+          ],
+          "technology": "Amazon CloudFront + AWS WAF (US region distribution)"
+        },
+        {
+          "name": "API Gateway",
+          "type": "API Gateway",
+          "responsibilities": [
+            "Expose REST endpoints: POST /shorten, GET /{code}, GET/DELETE/PUT /links",
+            "Request validation and throttling",
+            "Auth integration for write endpoints",
+            "Integration with Lambda services"
+          ],
+          "technology": "Amazon API Gateway (REST, usage plans, API keys/Cognito authorizer)"
+        },
+        {
+          "name": "URL Shortening Service",
+          "type": "Compute",
+          "responsibilities": [
+            "Validate and normalize long URLs",
+            "Generate short codes and ensure uniqueness",
+            "Persist mapping and metadata (owner, created_at, TTL, flags)",
+            "Return short URL and basic analytics stub"
+          ],
+          "technology": "AWS Lambda (Node.js/TypeScript)"
+        },
+        {
+          "name": "Redirect Service",
+          "type": "Compute",
+          "responsibilities": [
+            "Resolve short code to long URL",
+            "Issue HTTP 301/302 redirects based on link mutability policy",
+            "Emit asynchronous click events for analytics",
+            "Leverage CDN caching headers for hot links"
+          ],
+          "technology": "AWS Lambda (Node.js/TypeScript)"
+        },
+        {
+          "name": "URL Mapping Store",
+          "type": "Storage",
+          "responsibilities": [
+            "Store shortCode -> longURL mapping and metadata",
+            "Support conditional writes for collision avoidance",
+            "Optional TTL for expiring links",
+            "Secondary index for user-owned link listings"
+          ],
+          "technology": "Amazon DynamoDB (On-Demand capacity, PK=shortCode, GSI=userId)"
+        },
+        {
+          "name": "Identity and Access Management",
+          "type": "Identity",
+          "responsibilities": [
+            "User registration, login, and token issuance",
+            "Protect write/admin APIs",
+            "Support API keys for anonymous or limited creation"
+          ],
+          "technology": "Amazon Cognito User Pools + Cognito Authorizer"
+        },
+        {
+          "name": "Static Web Console",
+          "type": "Web App",
+          "responsibilities": [
+            "Provide UI to create and manage short links",
+            "Call backend APIs securely",
+            "Serve static assets globally"
+          ],
+          "technology": "React SPA on Amazon S3 + CloudFront"
+        },
+        {
+          "name": "Observability and Metrics",
+          "type": "Monitoring",
+          "responsibilities": [
+            "Centralized logs for API and Lambdas",
+            "Dashboards and alarms on latency, errors, and throttles",
+            "Basic request tracing"
+          ],
+          "technology": "Amazon CloudWatch Logs, Metrics, Alarms, X-Ray (optional)"
+        },
+        {
+          "name": "Click Event Pipeline (Optional, cost-aware)",
+          "type": "Analytics",
+          "responsibilities": [
+            "Ingest click events asynchronously from redirect path",
+            "Durable storage of events for later analysis",
+            "Ad-hoc analytics querying"
+          ],
+          "technology": "Amazon Kinesis Firehose -> Amazon S3 -> Amazon Athena (can be deferred)"
+        },
+        {
+          "name": "API Response Caching (Optional)",
+          "type": "Cache",
+          "responsibilities": [
+            "Cache GET /{code} lookups to reduce DynamoDB reads",
+            "Reduce tail latencies during peaks"
+          ],
+          "technology": "API Gateway Caching (per-stage, TTL tuned)"
+        },
+        {
+          "name": "ID/Code Generation Library",
+          "type": "Library",
+          "responsibilities": [
+            "Generate short, URL-safe base62 codes",
+            "Avoid collisions with conditional put checks",
+            "Support custom aliases"
+          ],
+          "technology": "ULID/Hashids library with collision check in DynamoDB"
+        }
+      ],
+      "capacity_estimations": {
+        "expected_users": "1,000\u201310,000 MAU (US-centric)",
+        "requests_per_second": "Average 10\u201330 rps, peak up to ~100 rps; 90% reads (redirects), 10% writes (creates/management)",
+        "data_storage": "100k\u20131M short links over time (~1 KB/item) = 0.1\u20131 GB in DynamoDB; logs/analytics 1\u20135 GB/month in S3"
+      },
+      "tradeoffs": [
+        "Serverless minimizes ops and cost at low-to-moderate traffic but may become pricier than containers at sustained high throughput.",
+        "DynamoDB eventual consistency yields lower latency/cost but risks stale reads; use strongly consistent reads for admin ops only.",
+        "Using 301 (permanent) enables aggressive CDN caching but makes updates hard; 302 (temporary) eases updates but reduces cacheability.",
+        "CloudFront caching lowers latency/cost but can serve stale entries; tune short TTLs and allow cache invalidations for critical updates.",
+        "Random/base62 code generation is simple and scalable but relies on collision checks; dedicated key-generation service adds complexity.",
+        "Single-region deployment is cost-effective but less resilient to region-wide outages; multi-region active-active raises cost/complexity.",
+        "API Gateway and Lambda cold starts can add latency spikes; provisioned concurrency for redirect path improves p99 at added cost.",
+        "Optional analytics pipeline adds value but introduces storage and processing costs; can be deferred to meet cost constraints."
+      ],
+      "architecture_patterns": [
+        "Serverless (API Gateway + Lambda + DynamoDB)",
+        "Cache-Aside (CloudFront and API Gateway caching for redirects)",
+        "CQRS-lite (separate write path for creation and read path for redirects)",
+        "Event-Driven (async click events to S3 via Firehose)",
+        "Twelve-Factor App (stateless compute, config via env)"
+      ],
+      "non_functional_requirements": {
+        "availability": ">= 99.9% in single region, improved global edge availability via CloudFront",
+        "response_time": "P50 50\u2013100 ms from edge (cached), P95 150\u2013300 ms uncached; create operations < 400 ms P95",
+        "scalability": "Auto-scales to hundreds of rps without re-architecture; DynamoDB on-demand and Lambda concurrency scales with traffic"
+      }
+    },
+    "parent_id": null
+  },
+  "8ac7fd44-7680-4054-b9d1-a4d081ddd321": {
+    "id": "8ac7fd44-7680-4054-b9d1-a4d081ddd321",
+    "version": 1,
+    "timestamp": "2025-10-21T21:56:34.577307",
+    "requirements": "Rate limiting for multiple API without authentication",
+    "assumptions": {
+      "users": "1000-10000",
+      "region": "India",
+      "budget": "moderate"
+    },
+    "constraints": [
+      "low latency",
+      "high speed"
+    ],
+    "design": {
+      "components": [
+        {
+          "name": "Anycast DNS and CDN/WAF Edge",
+          "type": "Edge",
+          "responsibilities": [
+            "Geo-route traffic to India POPs for low latency",
+            "DDoS/L7 protection and IP reputation filtering",
+            "Edge token-bucket prefilter per client-IP/User-Agent/path",
+            "Expose Retry-After headers and propagate request metadata"
+          ],
+          "technology": "Route53/Anycast DNS + Cloudflare/Akamai/AWS CloudFront (India POPs)"
+        },
+        {
+          "name": "API Gateway / Ingress",
+          "type": "Gateway",
+          "responsibilities": [
+            "Terminate TLS and route to backend APIs",
+            "Enforce local in-proxy rate limits (shared-memory token bucket)",
+            "Apply per-API policies (path, method, headers) without client auth",
+            "Return 429 with Retry-After and structured error body",
+            "Emit metrics/tracing for observability"
+          ],
+          "technology": "Envoy Proxy or NGINX with Lua/wasm plugins on Kubernetes (ap-south)"
+        },
+        {
+          "name": "Distributed Rate Limiter Service",
+          "type": "Stateful Service",
+          "responsibilities": [
+            "Atomic sliding-window counters with burstable token-bucket semantics",
+            "Multi-dimensional keys (IP, UA, path, origin API) with configurable TTL",
+            "Consistent hashing across shards; idempotent increment via Lua scripts",
+            "Greylisting and temporary blocklists; generate policy-driven Retry-After"
+          ],
+          "technology": "Redis Cluster (3\u20136 shards, multi-AZ) + Go service with Lua scripts and RedisBloom"
+        },
+        {
+          "name": "Policy and Configuration Service",
+          "type": "Control Plane",
+          "responsibilities": [
+            "CRUD for per-API rate policies, limits, and dimensions",
+            "Hot reload/distribution of policies to edge and gateway",
+            "Audit trails and versioned rollbacks of configs"
+          ],
+          "technology": "PostgreSQL + gRPC/REST API + etcd/Consul for dynamic config"
+        },
+        {
+          "name": "Local Hot Counter Cache",
+          "type": "Optimization",
+          "responsibilities": [
+            "Short-lived (1\u20135s) local caches of counters to reduce central Redis load",
+            "Probabilistic pre-check using Bloom filter to drop obvious abusers",
+            "Eventual consistency within short windows to minimize latency"
+          ],
+          "technology": "NGINX shared dict / Envoy local rate limit filter + Redis local instance"
+        },
+        {
+          "name": "Telemetry and Analytics",
+          "type": "Data Pipeline",
+          "responsibilities": [
+            "Ingest access logs, 429 events, and policy changes",
+            "Real-time dashboards and long-term analytics",
+            "Support investigations and capacity planning"
+          ],
+          "technology": "Kafka + ClickHouse (columnar) + S3-compatible object storage (ap-south-1)"
+        },
+        {
+          "name": "Monitoring and Alerting",
+          "type": "Observability",
+          "responsibilities": [
+            "Collect metrics (RPS, p95 latency, Redis ops, error rates)",
+            "SLO tracking and alerting on saturation and failures",
+            "Blackbox probes from India regions"
+          ],
+          "technology": "Prometheus + Grafana + Alertmanager + OpenTelemetry"
+        },
+        {
+          "name": "Orchestration and Autoscaling",
+          "type": "Platform",
+          "responsibilities": [
+            "Blue/green and rolling deployments",
+            "Horizontal Pod Autoscaling by RPS/CPU/Redis latency",
+            "Cluster autoscaler and multi-AZ resilience"
+          ],
+          "technology": "Kubernetes (EKS/GKE/AKS in India region) + HPA + Cluster Autoscaler"
+        },
+        {
+          "name": "Abuse Detection (Heuristics)",
+          "type": "Protection",
+          "responsibilities": [
+            "Detect floods and anomalous patterns without user auth",
+            "Adjust per-IP thresholds with NAT sensitivity heuristics",
+            "Temporary blocks and decaying penalties"
+          ],
+          "technology": "Go service + RedisBloom + eBPF-based sampling (optional)"
+        },
+        {
+          "name": "Admin Portal",
+          "type": "UI",
+          "responsibilities": [
+            "Manage APIs, routes, and rate-limit policies",
+            "Visualize usage, hot keys, and blocked requests",
+            "Role-based access and audit"
+          ],
+          "technology": "React + Node.js/Next.js + OAuth for internal admins"
+        }
+      ],
+      "capacity_estimations": {
+        "expected_users": "1,000\u201310,000 monthly active users (1\u20133% concurrent)",
+        "requests_per_second": "Average 300\u20131,500 RPS; peak 5,000\u201310,000 RPS during bursts",
+        "data_storage": "Rate counters: 3\u20136 GB Redis memory (1\u20135 min TTL); Logs/metrics: 50\u2013100 GB/day in object storage + ClickHouse"
+      },
+      "tradeoffs": [
+        "IP-based limiting without authentication can unfairly throttle users behind NAT or mobile carriers; mitigated with UA/path dimensions and NAT-aware thresholds.",
+        "Local (edge/gateway) pre-checks reduce latency but introduce eventual consistency vs. globally exact limits.",
+        "Centralized Redis provides atomicity but adds network hops; sharding and local caches balance latency and precision.",
+        "Token-bucket allows bursts and better UX but risks short-term spikes; fixed/sliding windows are stricter but less user-friendly.",
+        "Aggressive heuristics lower abuse but increase false positives; conservative policies reduce protection.",
+        "CDN/WAF edge improves latency and protection but increases vendor lock-in and cost.",
+        "Detailed telemetry improves debugging but increases storage and privacy considerations.",
+        "Multi-API configurability adds control-plane complexity and risks misconfiguration; mitigated by versioned rollbacks and validation."
+      ],
+      "architecture_patterns": [
+        "Token Bucket and Sliding Window Rate Limiting",
+        "Edge Computing with CDN/WAF",
+        "Sharding with Consistent Hashing",
+        "Circuit Breaker and Backpressure",
+        "Event-Driven Telemetry Pipeline",
+        "Blue/Green Deployments",
+        "CQRS for config vs analytics paths",
+        "Multi-AZ High Availability"
+      ],
+      "non_functional_requirements": {
+        "availability": ">= 99.95% regional (multi-AZ for gateway and Redis; no single point of failure)",
+        "response_time": "Rate-limiting overhead p95 < 5 ms; gateway end-to-end p95 < 50 ms within India",
+        "scalability": "Horizontal scale to 10x peak RPS within 5 minutes via HPA; Redis scales by adding shards"
+      }
+    },
+    "parent_id": null
+  }
+}
